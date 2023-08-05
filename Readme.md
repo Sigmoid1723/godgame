@@ -6,8 +6,8 @@
 
 ## Build script
 
-    `./build.sh`
+    ./build.sh
     
 ## Run
 
-    `./build/godgame`
+    ./build/godgame
