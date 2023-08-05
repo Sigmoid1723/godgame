@@ -287,6 +287,16 @@ int main(int argc, char *argv[])
           bool Running = true;
           sdl_window_dimension Dimension = SDLGetWindowDimension(Window);
           SDLResizeTexture(&GlobalBackBuffer,Renderer, Dimension.Width, Dimension.Height);
+
+          
+          // Note: SoundTest
+          int SamplesPerSecond = 48000;
+          int ToneHz = 256;
+          int16_t ToneVolume = 3000;
+          uint32_t RunningSampleIndex = 0;
+          int SquareWavePeriod = SamplesPerSecond / ToneHz;
+          int HalfSquareWavePeriod = SquareWavePeriod / 2;
+          int BytesPerSample = sizeof(int16_t) * 2;
           
           while(Running)
             {
