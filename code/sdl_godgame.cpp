@@ -25,8 +25,9 @@ struct colors {
   int Red=0;
 };
 
-global_variable sdl_offscreen_buffer GlobalBackBuffer;
 global_variable colors COLS;
+global_variable sdl_offscreen_buffer GlobalBackBuffer;
+
 
 sdl_window_dimension
 SDLGetWindowDimension(SDL_Window *Window)
@@ -105,13 +106,6 @@ SDLUpdateWindow(sdl_offscreen_buffer *Buffer,SDL_Window *Window,SDL_Renderer *Re
 }
 
 internal void
-SDLAudioCallback(void *UserData, uint8_t *AudioData, int Length)
-{
-  // clear audio buffer to silence.
-  memset(AudioData,0, Length);
-}
-
-internal void
 SDLInitAudio (int32_t SamplesPerSecond, int32_t BufferSize)
 {
   SDL_AudioSpec AudioSettings = {0};
@@ -120,19 +114,16 @@ SDLInitAudio (int32_t SamplesPerSecond, int32_t BufferSize)
   AudioSettings.format = AUDIO_S16;
   AudioSettings.channels = 2;
   AudioSettings.samples = BufferSize;
-  AudioSettings.callback = &SDLAudioCallback;
 
   SDL_OpenAudio(&AudioSettings,0);
 
-  printf("Initialized audio device at frequency %d Hz, %d Channels\n", AudioSettings.freq,AudioSettings.channels);
+  printf("Initialized audio device at frequency %d Hz, %d Channels,buffersize %d\n", AudioSettings.freq,AudioSettings.channels,AudioSettings.samples);
 
   if (AudioSettings.format != AUDIO_S16)
     {
       printf("we didn't get s16 sample\n");
       SDL_CloseAudio();
     }
-
-  SDL_PauseAudio(0);
 }
 
 bool HandleEvent(SDL_Event *Event)
@@ -266,9 +257,6 @@ int main(int argc, char *argv[])
   SDL_Window *Window;
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
-  // Open our audio.
-  SDLInitAudio(48000, 4096);
-
   // Create out window.
   Window = SDL_CreateWindow("God Game",
                             SDL_WINDOWPOS_UNDEFINED,
@@ -297,6 +285,9 @@ int main(int argc, char *argv[])
           int SquareWavePeriod = SamplesPerSecond / ToneHz;
           int HalfSquareWavePeriod = SquareWavePeriod / 2;
           int BytesPerSample = sizeof(int16_t) * 2;
+          // Open Audio Device
+          SDLInitAudio(48000, SamplesPerSecond * BytesPerSample / 60);
+          bool SoundIsPlaying = false;
           
           while(Running)
             {
@@ -309,6 +300,33 @@ int main(int argc, char *argv[])
                     }
                 }
                   RenderWeirdGradient(&GlobalBackBuffer,&COLS.Blue,&COLS.Green,&COLS.Red);
+
+                  // Soundtest
+                  int TargetQueueBytes = SamplesPerSecond * BytesPerSample;
+                  int BytesToWrite = TargetQueueBytes - SDL_GetQueuedAudioSize(1);
+                  if(BytesToWrite)
+                    {
+                      void *SoundBuffer = malloc(BytesToWrite);
+                      int16_t *SampleOut = (int16_t *)SoundBuffer;
+                      int SampleCount = BytesToWrite / BytesPerSample;
+                      for(int SampleIndex = 0;
+                          SampleIndex < SampleCount;
+                          ++SampleIndex)
+                        {
+                          int16_t SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                          *SampleOut++ = SampleValue;
+                          *SampleOut++ = SampleValue;
+                        }
+                      SDL_QueueAudio(1,SoundBuffer,BytesToWrite);
+                      free(SoundBuffer);
+                    }
+
+                  if(!SoundIsPlaying)
+                    {
+                      SDL_PauseAudio(0);
+                      SoundIsPlaying = true;
+                    }
+                  
                   SDLUpdateWindow(&GlobalBackBuffer,Window,Renderer);
             }
         }
