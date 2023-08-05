@@ -234,7 +234,7 @@ bool HandleEvent(SDL_Event *Event)
 int main(int argc, char *argv[])
 {
   SDL_Window *Window;
-  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
   // Create out window.
   Window = SDL_CreateWindow("God Game",
                             SDL_WINDOWPOS_UNDEFINED,
