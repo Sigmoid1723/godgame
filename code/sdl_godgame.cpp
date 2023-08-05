@@ -25,9 +25,8 @@ struct colors {
   int Red=0;
 };
 
-global_variable colors COLS;
-
 global_variable sdl_offscreen_buffer GlobalBackBuffer;
+global_variable colors COLS;
 
 sdl_window_dimension
 SDLGetWindowDimension(SDL_Window *Window)
@@ -103,6 +102,37 @@ SDLUpdateWindow(sdl_offscreen_buffer *Buffer,SDL_Window *Window,SDL_Renderer *Re
                  0,
                  0);
   SDL_RenderPresent(Renderer);
+}
+
+internal void
+SDLAudioCallback(void *UserData, uint8_t *AudioData, int Length)
+{
+  // clear audio buffer to silence.
+  memset(AudioData,0, Length);
+}
+
+internal void
+SDLInitAudio (int32_t SamplesPerSecond, int32_t BufferSize)
+{
+  SDL_AudioSpec AudioSettings = {0};
+
+  AudioSettings.freq = SamplesPerSecond;
+  AudioSettings.format = AUDIO_S16;
+  AudioSettings.channels = 2;
+  AudioSettings.samples = BufferSize;
+  AudioSettings.callback = &SDLAudioCallback;
+
+  SDL_OpenAudio(&AudioSettings,0);
+
+  printf("Initialized audio device at frequency %d Hz, %d Channels\n", AudioSettings.freq,AudioSettings.channels);
+
+  if (AudioSettings.format != AUDIO_S16)
+    {
+      printf("we didn't get s16 sample\n");
+      SDL_CloseAudio();
+    }
+
+  SDL_PauseAudio(0);
 }
 
 bool HandleEvent(SDL_Event *Event)
@@ -235,6 +265,10 @@ int main(int argc, char *argv[])
 {
   SDL_Window *Window;
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+
+  // Open our audio.
+  SDLInitAudio(48000, 4096);
+
   // Create out window.
   Window = SDL_CreateWindow("God Game",
                             SDL_WINDOWPOS_UNDEFINED,
