@@ -44,6 +44,8 @@ struct sdl_sound_output {
 global_variable colors COLS;
 global_variable sdl_offscreen_buffer GlobalBackBuffer;
 
+global_variable short ChangeWave = -2561;
+
 sdl_sound_output SoundOutput = {};
 
 sdl_window_dimension
@@ -122,7 +124,7 @@ SDLUpdateWindow(sdl_offscreen_buffer *Buffer,SDL_Window *Window,SDL_Renderer *Re
   SDL_RenderPresent(Renderer);
 }
 
-global_variable bool IsPlaying = true;
+// global_variable bool IsPlaying = true;
 
 // internal void
 // SoundTogglePlay()
@@ -138,6 +140,13 @@ global_variable bool IsPlaying = true;
 //       IsPlaying = true;
 //     }
 // }
+
+internal void
+GenerateDiffSound(void)
+{
+  SoundOutput.ToneHz = 512 + (int)(256.0f*((float)ChangeWave / 3000.0f));
+  SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+}
 
 internal void
 SDLInitAudio (int32_t SamplesPerSecond, int32_t BufferSize)
@@ -217,21 +226,33 @@ bool HandleEvent(SDL_Event *Event)
               {
                 (COLS.Blue) += 40;
                 (COLS.Red) += 40;
+
+                GenerateDiffSound();
+                ChangeWave += 100;
               }
             else if(KeyCode == SDLK_w)
               {
                 (COLS.Green) += 30;                
-                (COLS.Red) += 30;                
+                (COLS.Red) += 30;
+
+                GenerateDiffSound();
+                ChangeWave += 100;
               }
             else if(KeyCode == SDLK_d)
               {
                 (COLS.Blue) -= 40;
                 (COLS.Red) -= 40;
+
+                GenerateDiffSound();
+                ChangeWave -= 100;
               }
             else if(KeyCode == SDLK_s)
               {
                 (COLS.Green) -= 30;                
-                (COLS.Red) -= 30;                
+                (COLS.Red) -= 30;
+
+                GenerateDiffSound();
+                ChangeWave -= 100;
               }
             else if(KeyCode == SDLK_e)
               {
@@ -239,8 +260,7 @@ bool HandleEvent(SDL_Event *Event)
               }
             else if(KeyCode == SDLK_UP)
               {
-                // SoundOutput.ToneHz = 512 + (int)(256.0f*((float)SDLK_UP / 30000.0f));
-                // SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+                
               }
             else if(KeyCode == SDLK_LEFT)
               {
