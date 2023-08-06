@@ -2,9 +2,13 @@
 #include <SDL.h>
 #include <SDL2/SDL_events.h>
 
+#include <math.h>
+
 #define internal static
 #define global_variable static
 #define local_persist static
+
+#define Pi32 3.14159265358979f
 
 struct sdl_offscreen_buffer {
   void *Memory;
@@ -25,9 +29,22 @@ struct colors {
   int Red=0;
 };
 
+struct sdl_sound_output {
+  int SamplesPerSecond;
+  int ToneHz;
+  int16_t ToneVolume;
+  uint32_t RunningSampleIndex;
+  int WavePeriod;
+  int BytesPerSample;
+  int SecondaryBufferSize;
+  float tSine;
+  int LatencySampleCount;
+};
+
 global_variable colors COLS;
 global_variable sdl_offscreen_buffer GlobalBackBuffer;
 
+sdl_sound_output SoundOutput = {};
 
 sdl_window_dimension
 SDLGetWindowDimension(SDL_Window *Window)
@@ -105,6 +122,23 @@ SDLUpdateWindow(sdl_offscreen_buffer *Buffer,SDL_Window *Window,SDL_Renderer *Re
   SDL_RenderPresent(Renderer);
 }
 
+global_variable bool IsPlaying = true;
+
+// internal void
+// SoundTogglePlay()
+// {
+//   if(IsPlaying)
+//     {
+//       SDL_PauseAudio(1);
+//       IsPlaying = false;
+//     }
+//   else if(!IsPlaying)
+//     {
+//       SDL_PauseAudio(0);
+//       IsPlaying = true;
+//     }
+// }
+
 internal void
 SDLInitAudio (int32_t SamplesPerSecond, int32_t BufferSize)
 {
@@ -124,6 +158,29 @@ SDLInitAudio (int32_t SamplesPerSecond, int32_t BufferSize)
       printf("we didn't get s16 sample\n");
       SDL_CloseAudio();
     }
+}
+
+internal void
+SDLFillSoundBuffer(sdl_sound_output *SoundOutput, int BytesToLock,int BytesToWrite)
+{
+  int SampleCount = BytesToWrite / SoundOutput->BytesPerSample;
+  void *AudioBuffer = malloc(BytesToWrite);
+  int16_t *SampleOut = (int16_t*)AudioBuffer;
+  for (int SampleIndex = 0;
+       SampleIndex < SampleCount;
+       ++SampleIndex)
+    {
+      float SineValue = sinf(SoundOutput->tSine);
+      int16_t SampleValue = (int16_t)(SineValue * SoundOutput->ToneVolume);
+      *SampleOut++ = SampleValue;
+      *SampleOut++ = SampleValue;
+
+      SoundOutput->tSine += 2.0f*Pi32*1.0f/(float)SoundOutput->WavePeriod;
+      ++SoundOutput->RunningSampleIndex;
+    }
+  SDL_QueueAudio(1,AudioBuffer,BytesToWrite);
+
+  free(AudioBuffer);
 }
 
 bool HandleEvent(SDL_Event *Event)
@@ -182,7 +239,8 @@ bool HandleEvent(SDL_Event *Event)
               }
             else if(KeyCode == SDLK_UP)
               {
-
+                // SoundOutput.ToneHz = 512 + (int)(256.0f*((float)SDLK_UP / 30000.0f));
+                // SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
               }
             else if(KeyCode == SDLK_LEFT)
               {
@@ -211,7 +269,7 @@ bool HandleEvent(SDL_Event *Event)
               }
             else if(KeyCode == SDLK_SPACE)
               {
-                
+                // SoundTogglePlay();
               }
             else if((KeyCode == SDLK_F4) && AltKeyDown)
               {
@@ -275,19 +333,18 @@ int main(int argc, char *argv[])
           bool Running = true;
           sdl_window_dimension Dimension = SDLGetWindowDimension(Window);
           SDLResizeTexture(&GlobalBackBuffer,Renderer, Dimension.Width, Dimension.Height);
-
           
-          // Note: SoundTest
-          int SamplesPerSecond = 48000;
-          int ToneHz = 256;
-          int16_t ToneVolume = 3000;
-          uint32_t RunningSampleIndex = 0;
-          int SquareWavePeriod = SamplesPerSecond / ToneHz;
-          int HalfSquareWavePeriod = SquareWavePeriod / 2;
-          int BytesPerSample = sizeof(int16_t) * 2;
+          SoundOutput.SamplesPerSecond = 48000;
+          SoundOutput.ToneHz = 256;
+          SoundOutput.ToneVolume = 3000;
+          SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
+          SoundOutput.BytesPerSample = sizeof(int16_t) * 2;
+          SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
+          
           // Open Audio Device
-          SDLInitAudio(48000, SamplesPerSecond * BytesPerSample / 60);
-          bool SoundIsPlaying = false;
+          SDLInitAudio(SoundOutput.SamplesPerSecond, SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample / 60);
+          SDLFillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample);
+          SDL_PauseAudio(0);
           
           while(Running)
             {
@@ -302,30 +359,9 @@ int main(int argc, char *argv[])
                   RenderWeirdGradient(&GlobalBackBuffer,&COLS.Blue,&COLS.Green,&COLS.Red);
 
                   // Soundtest
-                  int TargetQueueBytes = SamplesPerSecond * BytesPerSample;
+                  int TargetQueueBytes = SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample;
                   int BytesToWrite = TargetQueueBytes - SDL_GetQueuedAudioSize(1);
-                  if(BytesToWrite)
-                    {
-                      void *SoundBuffer = malloc(BytesToWrite);
-                      int16_t *SampleOut = (int16_t *)SoundBuffer;
-                      int SampleCount = BytesToWrite / BytesPerSample;
-                      for(int SampleIndex = 0;
-                          SampleIndex < SampleCount;
-                          ++SampleIndex)
-                        {
-                          int16_t SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
-                          *SampleOut++ = SampleValue;
-                          *SampleOut++ = SampleValue;
-                        }
-                      SDL_QueueAudio(1,SoundBuffer,BytesToWrite);
-                      free(SoundBuffer);
-                    }
-
-                  if(!SoundIsPlaying)
-                    {
-                      SDL_PauseAudio(0);
-                      SoundIsPlaying = true;
-                    }
+                  SDLFillSoundBuffer(&SoundOutput, 0, BytesToWrite);
                   
                   SDLUpdateWindow(&GlobalBackBuffer,Window,Renderer);
             }
