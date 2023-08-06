@@ -1,14 +1,16 @@
+//My game creation Playground
+
 #include <stdlib.h>
 #include <SDL.h>
 #include <SDL2/SDL_events.h>
 
 #include <math.h>
 
+#define Pi32 3.14159265358979f
+
 #define internal static
 #define global_variable static
 #define local_persist static
-
-#define Pi32 3.14159265358979f
 
 struct sdl_offscreen_buffer {
   void *Memory;
@@ -364,6 +366,8 @@ int main(int argc, char *argv[])
                 }
                   RenderWeirdGradient(&GlobalBackBuffer,&COLS.Blue,&COLS.Green,&COLS.Red);
 
+
+                  
                   // Soundtest
                   int TargetQueueBytes = SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample;
                   int BytesToWrite = TargetQueueBytes - SDL_GetQueuedAudioSize(1);
