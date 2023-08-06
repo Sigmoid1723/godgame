@@ -124,23 +124,6 @@ SDLUpdateWindow(sdl_offscreen_buffer *Buffer,SDL_Window *Window,SDL_Renderer *Re
   SDL_RenderPresent(Renderer);
 }
 
-// global_variable bool IsPlaying = true;
-
-// internal void
-// SoundTogglePlay()
-// {
-//   if(IsPlaying)
-//     {
-//       SDL_PauseAudio(1);
-//       IsPlaying = false;
-//     }
-//   else if(!IsPlaying)
-//     {
-//       SDL_PauseAudio(0);
-//       IsPlaying = true;
-//     }
-// }
-
 internal void
 GenerateDiffSound(void)
 {
@@ -201,7 +184,6 @@ bool HandleEvent(SDL_Event *Event)
     {
     case SDL_QUIT:
       {
-        printf("SDL QUIT\n");
         ShouldClose = true;
       } break;
 
@@ -289,11 +271,10 @@ bool HandleEvent(SDL_Event *Event)
               }
             else if(KeyCode == SDLK_SPACE)
               {
-                // SoundTogglePlay();
+                
               }
             else if((KeyCode == SDLK_F4) && AltKeyDown)
               {
-                printf("SDL QUIT\n");
                 ShouldClose = true;
               }
             
@@ -397,7 +378,7 @@ int main(int argc, char *argv[])
                   double MSPerFrame = (((1000.0f * (double)CounterElapsed) / (double)PerfCountFrequency));
                   double FPS = (double)PerfCountFrequency / (double)CounterElapsed;
                   double MCPF = ((double)CyclesElapsed / (1000.0f * 1000.0f));
-                  printf("%0.2f ms/f,%.02f /s,%0.2f mc/f\n",MSPerFrame,FPS,MCPF);
+                  printf("MSPerFrame = %0.2f ms/f, FPS =  %.02f /s, MCPF =  %0.2f mc/f\n",MSPerFrame,FPS,MCPF);
 
                   LastCycleCount = EndCyclecount;
                   LastCounter = EndCounter;
