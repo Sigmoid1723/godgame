@@ -335,6 +335,8 @@ int main(int argc, char *argv[])
   SDL_Window *Window;
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
+  uint64_t PerfCountFrequency = SDL_GetPerformanceFrequency();
+
   // Create out window.
   Window = SDL_CreateWindow("God Game",
                             SDL_WINDOWPOS_UNDEFINED,
@@ -365,6 +367,9 @@ int main(int argc, char *argv[])
           SDLInitAudio(SoundOutput.SamplesPerSecond, SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample / 60);
           SDLFillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount * SoundOutput.BytesPerSample);
           SDL_PauseAudio(0);
+
+          uint64_t LastCounter = SDL_GetPerformanceCounter();
+          uint64_t LastCycleCount = _rdtsc();
           
           while(Running)
             {
@@ -384,6 +389,18 @@ int main(int argc, char *argv[])
                   SDLFillSoundBuffer(&SoundOutput, 0, BytesToWrite);
                   
                   SDLUpdateWindow(&GlobalBackBuffer,Window,Renderer);
+                  uint64_t EndCyclecount = _rdtsc();
+                  uint64_t EndCounter = SDL_GetPerformanceCounter();
+                  uint64_t CounterElapsed = EndCounter - LastCounter;
+                  uint64_t CyclesElapsed = EndCyclecount- LastCycleCount;
+
+                  double MSPerFrame = (((1000.0f * (double)CounterElapsed) / (double)PerfCountFrequency));
+                  double FPS = (double)PerfCountFrequency / (double)CounterElapsed;
+                  double MCPF = ((double)CyclesElapsed / (1000.0f * 1000.0f));
+                  printf("%0.2f ms/f,%.02f /s,%0.2f mc/f\n",MSPerFrame,FPS,MCPF);
+
+                  LastCycleCount = EndCyclecount;
+                  LastCounter = EndCounter;
             }
         }
     }
